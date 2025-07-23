@@ -1,0 +1,47 @@
+
+
+ Employee Elevate - HR Assistant Chatbot Responses
+
+ Introduction
+Hello! I'm your HR assistant. I can help you with questions about leave policies, performance reviews, company benefits, and more. How can I assist you today?
+
+ Leave Policies
+Q: How many leave days am I entitled to?  
+A: Employees are entitled to 15 paid leave days per year, which can be used for vacation, personal time, or sick leave.
+
+Q: How do I apply for leave? 
+A: To apply for leave, please visit the Leave section on the Employee Portal and click on "Apply for Leave." Ensure to submit your application at least two weeks in advance.
+
+Q: What happens if I exceed my leave days? 
+A: Exceeding your leave days without prior approval may lead to a deduction from your salary or disciplinary action. Please manage your leave balance accordingly.
+
+ Performance Reviews
+Q: When are performance reviews conducted?  
+A: Performance reviews are conducted quarterly. You will be notified in advance regarding the review process.
+
+Q: How is my performance evaluated?  
+A: Performance is evaluated based on the number of projects and tasks completed, as well as the total hours worked.
+
+Q: Can I request feedback outside of the review period?  
+A: Yes, you can request informal feedback from your manager at any time. Regular check-ins are encouraged for continuous improvement.
+
+Company Benefits
+Q: What benefits does the company offer? 
+A: Our company offers a comprehensive benefits package, including health insurance, retirement plans, paid time off, and professional development opportunities.
+
+Q: How do I enroll in the health insurance plan?  
+A: You can enroll in the health insurance plan during the open enrollment period. Please visit the Employee Portal for more details.
+
+Q: Are there any employee discounts available?  
+A: Yes, employees are eligible for discounts on various services and products. Check the Employee Portal for a list of current discounts.
+
+General Inquiries
+Q: Who do I contact for issues related to payroll? 
+A: For payroll issues, please email munashezimano@company.com.
+
+Q: How do I update my personal information?**  
+A: You can update your personal information directly through the Employee Portal under the "Profile" section.
+
+Q: Where can I find the employee handbook?
+A: The employee handbook is available for download in the Employee Portal. It contains important information about company policies and procedures.
+

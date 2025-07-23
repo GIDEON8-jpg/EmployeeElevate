@@ -16,6 +16,40 @@ interface Message {
   sender: "user" | "bot"
   timestamp: Date
 }
+function formatMessage(message: string) {
+  const lines = message.split("\n");
+
+  const listItems = lines
+    .filter((line) => line.trim().startsWith("*"))
+    .map((line, i) => (
+      <li key={`li-${i}`}>
+        {line.replace(/^\*\s*/, "").replace(/\*\*/g, "")}
+      </li>
+    ));
+    const otherParagraphs = lines
+    .filter((line) => !line.trim().startsWith("*"))
+    .map((line, i) => (
+      <p key={`p-${i}`}>
+        {line.replace(/^\*\s*/, "").replace(/\*\*/g, "")}
+      </p>
+    ));
+  const others = lines
+    .filter((line) => !line.trim().startsWith("*"))
+    .map((line, i) => (
+      <p key={`p-${i}`}>
+        {line.replace(/\*\*/g, "")}
+      </p>
+    ));
+
+  return (
+    <>
+      {others}
+      {listItems.length > 0 && <ul className="list-disc pl-5 mt-2">{listItems}</ul>}
+    </>
+  );
+}
+
+
 
 export function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false)
@@ -70,13 +104,13 @@ What can I help you with today?`,
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch("http://localhost:5000/api/chat/ask/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: inputValue,
+          prompt: inputValue,
           user: user,
           context: "employee_management_system",
         }),
@@ -87,10 +121,11 @@ What can I help you with today?`,
       }
 
       const data = await response.json()
+      console.log("Bot response:", data)
 
       const botMessage: Message = {
         id: messages.length + 2,
-        content: data.message,
+        content: data.reply,
         sender: "bot",
         timestamp: new Date(),
       }
@@ -175,7 +210,9 @@ What can I help you with today?`,
                       message.sender === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <div className="text-sm whitespace-pre-wrap">
+  {formatMessage(message.content)}
+</div>
                     <p className={`text-xs mt-1 ${message.sender === "user" ? "text-blue-100" : "text-gray-500"}`}>
                       {message.timestamp.toLocaleTimeString([], {
                         hour: "2-digit",

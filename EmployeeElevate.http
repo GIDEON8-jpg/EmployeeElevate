@@ -1,0 +1,11 @@
+@EmployeeElevate_HostAddress = http://localhost:5236
+
+GET {{EmployeeElevate_HostAddress}}/todos/
+Accept: application/json
+
+###
+
+GET {{EmployeeElevate_HostAddress}}/todos/1
+Accept: application/json
+
+###

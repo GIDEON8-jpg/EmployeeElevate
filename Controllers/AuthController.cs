@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using EmployeeElevate.Models;
-using EmployeeElevate.Services;
+using EmployeeElevate.Services.Interfaces;
 
 namespace EmployeeElevate.Controllers
 {
@@ -8,9 +8,9 @@ namespace EmployeeElevate.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly EmployeeService _employeeService;
+        private readonly IEmployeeService _employeeService;
 
-        public AuthController(EmployeeService employeeService)
+        public AuthController(IEmployeeService employeeService)
         {
             _employeeService = employeeService;
         }
@@ -18,21 +18,21 @@ namespace EmployeeElevate.Controllers
         [HttpGet("employees")]
         public async Task<IActionResult> GetEmployees()
         {
-            var employees = await _employeeService.GetAllAsync();
+            var employees = await _employeeService.GetAllEmployeesAsync();
             return Ok(employees);
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(Employee employee)
         {
-            var created = await _employeeService.AddAsync(employee);
+            var created = await _employeeService.CreateEmployeeAsync(employee);
             return Ok(created);
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(string email, string password)
         {
-            var employee = await _employeeService.GetByEmailAndPasswordAsync(email, password);
+            var employee = await _employeeService.AuthenticateAsync(email, password);
             if (employee == null) return Unauthorized("Invalid credentials.");
             return Ok(employee);
         }

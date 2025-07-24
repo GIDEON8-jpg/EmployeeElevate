@@ -1,8 +1,8 @@
-﻿// Controllers/EmployeeController.cs
-
+﻿
 using Microsoft.AspNetCore.Mvc;
 using EmployeeElevate.Models;
-using EmployeeElevate.Services;
+using EmployeeElevate.EmployeeManagementCore.Interfaces;
+using EmployeeElevate.Services.Interfaces;
 
 namespace EmployeeElevate.Controllers
 {
@@ -10,41 +10,58 @@ namespace EmployeeElevate.Controllers
     [Route("api/[controller]")]
     public class EmployeeController : ControllerBase
     {
-        private readonly EmployeeService _employeeService;
+        private readonly IEmployeeService _employeeService;
 
-        public EmployeeController(EmployeeService employeeService)
+        public EmployeeController(IEmployeeService employeeService)
         {
             _employeeService = employeeService;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
+        // GET: api/employee/employees
+        [HttpGet("employees")]
+        public async Task<IActionResult> GetEmployees()
         {
-            var employees = await _employeeService.GetAllAsync();
+            var employees = await _employeeService.GetAllEmployeesAsync();
             return Ok(employees);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create(Employee employee)
-        {
-            var created = await _employeeService.AddAsync(employee);
-            return Ok(created);
-        }
-
+        // GET: api/employee/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetEmployeeById(int id)
         {
-            var employee = await _employeeService.GetByIdAsync(id);
+            var employee = await _employeeService.GetEmployeeByIdAsync(id);
             if (employee == null) return NotFound();
             return Ok(employee);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        // POST: api/employee/register
+        [HttpPost("register")]
+        public async Task<IActionResult> Register(Employee employee)
         {
-            var success = await _employeeService.DeleteAsync(id);
-            if (!success) return NotFound();
-            return NoContent();
+            var created = await _employeeService.CreateEmployeeAsync(employee);
+            return Ok(created);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateEmployee(int id, [FromBody] Employee employee)
+        {
+            var result = await _employeeService.UpdateEmployeeAsync(id, employee);
+
+            if (result == null)
+                return NotFound("Employee not found or could not be updated.");
+
+            return Ok("Employee updated successfully.");
+        }
+
+
+
+        // DELETE: api/employee/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteEmployee(int id)
+        {
+            var result = await _employeeService.DeleteEmployeeAsync(id);
+            if (!result) return NotFound("Employee not found.");
+            return Ok("Employee deleted successfully.");
         }
     }
 }

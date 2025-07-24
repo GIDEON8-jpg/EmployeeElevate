@@ -1,10 +1,11 @@
 ﻿using EmployeeElevate.Data;
 using EmployeeElevate.Models;
+using EmployeeElevate.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace EmployeeElevate.Services
 {
-    public class EmployeeService
+    public class EmployeeService : IEmployeeService
     {
         private readonly AppDbContext _context;
 
@@ -13,28 +14,24 @@ namespace EmployeeElevate.Services
             _context = context;
         }
 
-        // Get all employees
-        public async Task<IEnumerable<Employee>> GetAllAsync()
+        public async Task<IEnumerable<Employee>> GetAllEmployeesAsync()
         {
             return await _context.Employees.ToListAsync();
         }
 
-        // Get employee by ID
-        public async Task<Employee?> GetByIdAsync(int id)
+        public async Task<Employee?> GetEmployeeByIdAsync(int id)
         {
             return await _context.Employees.FindAsync(id);
         }
 
-        // Add a new employee
-        public async Task<Employee> AddAsync(Employee employee)
+        public async Task<Employee> CreateEmployeeAsync(Employee employee)
         {
             _context.Employees.Add(employee);
             await _context.SaveChangesAsync();
             return employee;
         }
 
-        // Update an existing employee
-        public async Task<Employee?> UpdateAsync(int id, Employee updated)
+        public async Task<Employee?> UpdateEmployeeAsync(int id, Employee updated)
         {
             var employee = await _context.Employees.FindAsync(id);
             if (employee == null) return null;
@@ -48,8 +45,7 @@ namespace EmployeeElevate.Services
             return employee;
         }
 
-        // Delete employee by ID
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteEmployeeAsync(int id)
         {
             var employee = await _context.Employees.FindAsync(id);
             if (employee == null) return false;
@@ -59,8 +55,7 @@ namespace EmployeeElevate.Services
             return true;
         }
 
-        // Authenticate by email and password
-        public async Task<Employee?> GetByEmailAndPasswordAsync(string email, string password)
+        public async Task<Employee?> AuthenticateAsync(string email, string password)
         {
             return await _context.Employees
                 .FirstOrDefaultAsync(e => e.Email == email && e.Password == password);

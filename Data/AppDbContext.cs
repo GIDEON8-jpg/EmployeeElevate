@@ -13,8 +13,10 @@ namespace EmployeeElevate.Data
         // Tables
         public DbSet<Employee> Employees { get; set; }
         public DbSet<TaskAssignment> TaskAssignments { get; set; }
+
         public DbSet<Leave> Leaves { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

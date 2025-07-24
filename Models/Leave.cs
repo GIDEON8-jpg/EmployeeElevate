@@ -1,14 +1,16 @@
-﻿namespace EmployeeElevate.Models
-{
-    public class Leave
-    {
-        public int Id { get; set; }
-        
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-        public bool IsApproved { get; set; }
+﻿using EmployeeElevate.Models;
 
-        // Navigation property
-        public Employee Employee { get; set; }
-    }
+public class Leave
+{
+    public int Id { get; set; }
+
+    public DateTimeOffset StartDate { get; set; }
+
+    public DateTimeOffset EndDate { get; set; }
+
+    public bool IsApproved { get; set; }
+
+    public int EmployeeId { get; set; }
+
+    public Employee? Employee { get; set; }
 }

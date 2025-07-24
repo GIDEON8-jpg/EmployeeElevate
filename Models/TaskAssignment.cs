@@ -1,29 +1,24 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EmployeeElevate.Models
 {
+    [Table("task_assignments")]  // Specify the exact table name
     public class TaskAssignment
     {
-        [Key]
         public int Id { get; set; }
-
-        [Required]
+        
+        [Column("AssignedToUserId")]  // Map to the correct database column
+        public int EmployeeId { get; set; }
+        
         public string Title { get; set; } = string.Empty;
-
-        public string? Description { get; set; }
-
-        [Required]
-        public int AssignedToUserId { get; set; }
-
-        [ForeignKey(nameof(AssignedToUserId))]
-        public Employee? AssignedToUser { get; set; }
-
-        [Required]
-        public DateTime AssignedDate { get; set; } = DateTime.UtcNow;
-
+        public string Description { get; set; } = string.Empty;
+        
+        [Column("AssignedDate")]  // Map to the correct database column
+        public DateTime CreatedAt { get; set; }
+        
         public DateTime? DueDate { get; set; }
+        public bool IsCompleted { get; set; } = false;  // Add the missing property
 
-        public bool IsCompleted { get; set; } = false;
+        public Employee? Employee { get; set; }
     }
 }

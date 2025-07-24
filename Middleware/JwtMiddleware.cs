@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using EmployeeElevate.EmployeeManagementCore.Interfaces;
+using EmployeeElevate.Services.Interfaces;
 
 namespace EmployeeElevate.Middleware
 {

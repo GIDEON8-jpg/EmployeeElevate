@@ -48,7 +48,7 @@ namespace EmployeeElevate.Repositories
 
             existing.Title = task.Title;
             existing.Description = task.Description;
-            existing.AssignedToUser = task.AssignedToUser;
+            existing.Employee= task.Employee;
             existing.IsCompleted = task.IsCompleted;
             existing.DueDate = task.DueDate;
 

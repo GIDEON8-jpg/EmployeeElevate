@@ -46,10 +46,15 @@ namespace EmployeeElevate.Repositories
             var existing = await _context.Employees.FindAsync(employee.Id);
             if (existing == null) return false;
 
-            existing.Name = employee.Name;
+            existing.FullName = employee.FullName;
+            existing.Department = employee.Department;  
+            existing.Position = employee.Position;
+            existing.Phone = employee.Phone;
+
             existing.Email = employee.Email;
             existing.Password = employee.Password;
             existing.Role = employee.Role;
+            
 
             await _context.SaveChangesAsync();
             return true;

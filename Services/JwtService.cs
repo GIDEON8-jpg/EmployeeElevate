@@ -24,7 +24,7 @@ namespace EmployeeElevate.Services
         {
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, employee.Name),
+                new Claim(JwtRegisteredClaimNames.Sub, employee.FullName),
                 new Claim("id", employee.Id.ToString()),
                 new Claim(ClaimTypes.Role, employee.Role ?? "Employee"),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())

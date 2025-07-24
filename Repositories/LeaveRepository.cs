@@ -48,8 +48,18 @@ namespace EmployeeElevate.Repositories
 
             existing.StartDate = leave.StartDate;
             existing.EndDate = leave.EndDate;
-            existing.IsApproved = leave.IsApproved;
+            existing.Days = leave.Days;
+            existing.Reason = leave.Reason;
+            existing.Status = leave.Status;
+            existing.AppliedDate = leave.AppliedDate;
+            existing.ApprovedBy = leave.ApprovedBy;
+            existing.ApprovedDate = leave.ApprovedDate;
+            existing.RejectedBy = leave.RejectedBy;
 
+            existing.RejectedDate = leave.RejectedDate;
+            existing.EmployeeId = leave.EmployeeId;
+            existing.Employee = leave.Employee;
+            
             await _context.SaveChangesAsync();
             return true;
         }

@@ -40,7 +40,7 @@ namespace EmployeeElevate.Services
             var leave = await _context.Leaves.FindAsync(id);
             if (leave == null) return false;
 
-            leave.IsApproved = isApproved;
+            leave.Status = isApproved ? "Approved" : "Rejected";
             await _context.SaveChangesAsync();
             return true;
         }
@@ -48,7 +48,7 @@ namespace EmployeeElevate.Services
         public async Task<int> GetLeaveDaysTakenByEmployeeAsync(int employeeId)
         {
             var leaves = await _context.Leaves
-                .Where(l => l.EmployeeId == employeeId && l.IsApproved)
+                .Where(l => l.EmployeeId == employeeId && l.Status == "Approved")
                 .ToListAsync();
 
             int totalDays = 0;

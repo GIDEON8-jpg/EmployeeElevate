@@ -36,10 +36,15 @@ namespace EmployeeElevate.Services
             var employee = await _context.Employees.FindAsync(id);
             if (employee == null) return null;
 
-            employee.Name = updated.Name;
+            employee.FullName = updated.FullName;
+            employee.Department = updated.Department;
+            employee.Position = updated.Position;
+            employee.Phone = updated.Phone;
+
             employee.Email = updated.Email;
             employee.Role = updated.Role;
             employee.Password = updated.Password;
+
 
             await _context.SaveChangesAsync();
             return employee;

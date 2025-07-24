@@ -12,19 +12,39 @@ namespace EmployeeElevate.Models
 
         [Required]
         [MaxLength(100)]
-        public string Name { get; set; } = string.Empty;
+        [Column("full_name")]
+        public string FullName { get; set; } = string.Empty;
 
         [Required]
         [EmailAddress]
         [MaxLength(150)]
+        [Column("email")]
         public string Email { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(50)]
-        public string Role { get; set; } = string.Empty;
+        [MaxLength(255)]
+        [Column("password")]
+        public string Password { get; set; } = string.Empty;
+
+        [NotMapped] // Not stored in the database, used for validation only
+        public string ConfirmPassword { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(255)]
-        public string Password { get; set; } = string.Empty;
+        [MaxLength(50)]
+        [Column("role")]
+        public string Role { get; set; } = "employee";
+
+        [MaxLength(100)]
+        [Column("department")]
+        public string Department { get; set; } = string.Empty;
+
+        [MaxLength(100)]
+        [Column("position")]
+        public string Position { get; set; } = string.Empty;
+
+        [Phone]
+        [MaxLength(20)]
+        [Column("phone")]
+        public string Phone { get; set; } = string.Empty;
     }
 }

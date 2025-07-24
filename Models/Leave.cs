@@ -1,16 +1,27 @@
-﻿using EmployeeElevate.Models;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-public class Leave
+namespace EmployeeElevate.Models
 {
-    public int Id { get; set; }
+    [Table("leaves")] // Explicit table mapping for PostgreSQL
+    public class Leave
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
-    public DateTimeOffset StartDate { get; set; }
+        [Required]
+        public DateTimeOffset StartDate { get; set; }
 
-    public DateTimeOffset EndDate { get; set; }
+        [Required]
+        public DateTimeOffset EndDate { get; set; }
 
-    public bool IsApproved { get; set; }
+        public bool IsApproved { get; set; } = false;
 
-    public int EmployeeId { get; set; }
+        [Required]
+        [ForeignKey("Employee")]
+        public int EmployeeId { get; set; }
 
-    public Employee? Employee { get; set; }
+        public Employee? Employee { get; set; }
+    }
 }

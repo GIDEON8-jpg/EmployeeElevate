@@ -18,6 +18,7 @@ builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<LeaveService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 
 // ✅ JWT Authentication config
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

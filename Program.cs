@@ -4,7 +4,6 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using EmployeeElevate.Data;
 using EmployeeElevate.Services;
-using EmployeeElevate.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,8 +14,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Services
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<ChatBotService>();
-builder.Services.AddScoped<LeaveService>();
-
 
 // ✅ JWT Authentication config
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -40,11 +37,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-// Service registrations
-builder.Services.AddScoped<IEmployeeService, EmployeeService>();
-builder.Services.AddScoped<ITaskService, TaskService>();  // ADDED THIS LINE - This was missing!
-builder.Services.AddScoped<LeaveService>();
 
 var app = builder.Build();
 

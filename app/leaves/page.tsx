@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +22,7 @@ import { AuthGuard } from "@/components/auth-guard"
 import { useAuth } from "@/hooks/use-auth"
 import { useLeaveManagement } from "@/hooks/use-leave-management"
 import { useToast } from "@/hooks/use-toast"
+import { LeaveApplication } from "@/hooks/use-leave-management"
 
 export default function LeavesPage() {
   const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false)
@@ -29,39 +30,133 @@ export default function LeavesPage() {
   const [selectedDepartment, setSelectedDepartment] = useState("all")
   const { isAdmin, user } = useAuth()
   const { toast } = useToast()
-  const { leaveApplications, addLeaveApplication, approveLeave, rejectLeave, getPendingLeaves, getApprovedLeaves } =
-    useLeaveManagement()
+  const { addLeaveApplication } = useLeaveManagement()
+  const [departments, setDepartments] = useState<string[]>([])
+  const [leaveTypes, setLeaveTypes] = useState<string[]>([
+    "Annual Leave",
+    "Sick Leave",
+    "Personal Leave",
+    "Maternity Leave",
+    "Emergency Leave",
+  ])
+  const [filteredApplications, setFilteredApplications] = useState<LeaveApplication[]>([])
+  const [leaveApplications, setLeaveApplications] = useState<LeaveApplication[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isAdminView, setIsAdminView] = useState(isAdmin)
+  const [isEmployeeView, setIsEmployeeView] = useState(!isAdmin)
+  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
+  
+  useEffect(() => {
+    // Fetch initial leave applications from the API
+    const fetchLeaveApplications = async () => {
+      const response = await fetch("/api/leaves")
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: "Failed to load leave applications. Please try again later.",
+          variant: "destructive",
+        })
+        return
+      }
+      const data = await response.json()
+      console.log("Fetched leave applications:", data)
+      setLeaveApplications(data)
+    }
 
-  const leaveTypes = ["Annual Leave", "Sick Leave", "Personal Leave", "Maternity Leave", "Emergency Leave"]
-  const departments = ["Engineering", "Marketing", "Human Resources", "Finance", "Operations", "Sales"]
+    fetchLeaveApplications()
+  }, [])
 
-  // Filter applications - EVERYONE sees ALL applications, just filtered by status and department
-  const filteredApplications = leaveApplications.filter((app) => {
-    const statusMatch = selectedStatus === "all" || app.status === selectedStatus
-    const departmentMatch = selectedDepartment === "all" || app.department === selectedDepartment
-    return statusMatch && departmentMatch
-  })
-
-  const handleApprove = (id: number) => {
-    approveLeave(id, user?.name || "Admin")
-    const application = leaveApplications.find((app) => app.id === id)
-    toast({
-      title: "Leave Approved",
-      description: `${application?.employeeName}'s leave application has been approved and will be visible across the system.`,
+  // Filter applications whenever leaveApplications, selectedStatus, or selectedDepartment changes
+  useEffect(() => {
+    const filterApplications = leaveApplications.filter((application) => {
+      const matchesStatus = selectedStatus === "all" || application.status === selectedStatus
+      const matchesDepartment = selectedDepartment === "all" || application.department === selectedDepartment
+      return matchesStatus && matchesDepartment
     })
+    setFilteredApplications(filterApplications)
+  }, [leaveApplications, selectedStatus, selectedDepartment])
+
+
+  const handleApprove = async (id: number) => {
+    try {
+      const response = await fetch(`/api/leaves/${id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          status: "Approved", 
+          approvedBy: user?.name,
+          approvedDate: new Date().toISOString().split("T")[0],
+          updatedAt: new Date().toISOString()
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to approve leave")
+      }
+      
+      // Refresh the leave applications
+      const refreshResponse = await fetch("/api/leaves")
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setLeaveApplications(data)
+      }
+      
+      toast({
+        title: "Leave Approved",
+        description: "Leave application has been approved and will be visible across the system.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve leave application. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleReject = (id: number) => {
-    rejectLeave(id, user?.name || "Admin")
-    const application = leaveApplications.find((app) => app.id === id)
-    toast({
-      title: "Leave Rejected",
-      description: `${application?.employeeName}'s leave application has been rejected.`,
-      variant: "destructive",
-    })
+  const handleReject = async (id: number) => {
+    try {
+      const response = await fetch(`/api/leaves/${id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          status: "Rejected", 
+          rejectedBy: user?.name,
+          rejectedDate: new Date().toISOString().split("T")[0],
+          updatedAt: new Date().toISOString()
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to reject leave")
+      }
+      
+      // Refresh the leave applications
+      const refreshResponse = await fetch("/api/leaves")
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setLeaveApplications(data)
+      }
+      
+      toast({
+        title: "Leave Rejected",
+        description: "Leave application has been rejected.",
+        variant: "destructive",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject leave application. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleApplyLeave = (formData: FormData) => {
+  const handleApplyLeave = async (formData: FormData) => {
     const startDate = new Date(formData.get("startDate") as string)
     const endDate = new Date(formData.get("endDate") as string)
     const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
@@ -72,18 +167,47 @@ export default function LeavesPage() {
       leaveType: formData.get("leaveType") as string,
       startDate: formData.get("startDate") as string,
       endDate: formData.get("endDate") as string,
-      days,
+      daysRequested: days,
       reason: formData.get("reason") as string,
       status: "Pending" as const,
       appliedDate: new Date().toISOString().split("T")[0],
+      // Add these fields to ensure proper timestamp handling
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
 
-    addLeaveApplication(newApplicationData)
-    setIsApplyDialogOpen(false)
-    toast({
-      title: "Leave Application Submitted",
-      description: "Your leave application has been submitted and is visible to all team members for transparency.",
-    })
+    try {
+      const response = await fetch("/api/leaves", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newApplicationData),
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to submit leave application")
+      }
+      
+      // Refresh the leave applications
+      const refreshResponse = await fetch("/api/leaves")
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        setLeaveApplications(data)
+      }
+      
+      setIsApplyDialogOpen(false)
+      toast({
+        title: "Leave Application Submitted",
+        description: "Your leave application has been submitted and is visible to all team members for transparency.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit leave application. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -114,8 +238,8 @@ export default function LeavesPage() {
 
   // Calculate stats from ALL applications (everyone sees organization-wide stats)
   const totalApplications = leaveApplications.length
-  const pendingApplications = getPendingLeaves().length
-  const approvedApplications = getApprovedLeaves().length
+  const pendingApplications = leaveApplications.filter((app) => app.status === "Pending").length
+  const approvedApplications = leaveApplications.filter((app) => app.status === "Approved").length
   const rejectedApplications = leaveApplications.filter((app) => app.status === "Rejected").length
 
   return (
@@ -319,7 +443,7 @@ export default function LeavesPage() {
                           {application.endDate}
                         </div>
                         <div>
-                          <span className="font-medium">Days:</span> {application.days} days
+                          <span className="font-medium">Days:</span> {application.daysRequested} days
                         </div>
                       </div>
                       <div className="mt-2">

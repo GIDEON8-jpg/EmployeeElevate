@@ -20,64 +20,40 @@ export default function LoginPage() {
   const [role, setRole] = useState<"employee" | "admin">("employee")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-
+  const base_url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
   const router = useRouter()
   const { login } = useAuth()
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+  e.preventDefault()
+  setIsLoading(true)
+  setError("")
 
-    try {
-      // Simulate authentication delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Check registered users first
-      const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]")
-      const foundUser = registeredUsers.find(
-        (user: any) => user.email === email && user.password === password && user.role === role,
-      )
-
-      if (foundUser) {
-        // Login with registered user
-        login({
-          id: foundUser.id,
-          name: foundUser.name,
-          email: foundUser.email,
-          role: foundUser.role,
-          department: foundUser.department,
-        })
-        router.push("/")
-        return
-      }
-
-      // Fallback to demo credentials with Zimbabwean names
-      const validCredentials = {
-        admin: { email: "gideon.zimano@company.co.zw", password: "admin123" },
-        employee: { email: "leeroy.sibanda@company.co.zw", password: "emp123" },
-      }
-
-      if (email === validCredentials[role].email && password === validCredentials[role].password) {
-        // Set user session
-        login({
-          id: role === "admin" ? "1" : "2",
-          name: role === "admin" ? "Gideon Zimano" : "Leeroy Sibanda",
-          email: email,
-          role: role,
-          department: role === "admin" ? "Human Resources" : "Engineering",
-        })
-
-        router.push("/")
-      } else {
-        setError("Invalid credentials. Please check your email, password, and role selection.")
-      }
-    } catch (err) {
-      setError("Login failed. Please try again.")
-    } finally {
-      setIsLoading(false)
+  try {
+    const response = await fetch(`${base_url}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      console.log("Login successful:", data)
+      localStorage.setItem("user", JSON.stringify(data)) 
+      localStorage.setItem("isAuthenticated", "true")
+      login(data)
+      router.push("/")
+    } else {
+      setError("Invalid credentials.")
     }
+  } catch (err) {
+    setError("Login failed. Please try again.")
+  } finally {
+    setIsLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">

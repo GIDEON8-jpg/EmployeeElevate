@@ -12,7 +12,7 @@ import { Users, Shield, Edit, Trash2, Search, UserPlus } from "lucide-react"
 
 interface RegisteredUser {
   id: string
-  name: string
+  fullName: string
   email: string
   role: "employee" | "admin"
   department: string
@@ -20,8 +20,8 @@ interface RegisteredUser {
   phone: string
   joinDate: string
   status: string
-  createdAt: string
 }
+const baseUrl = process.env.NET_API_URL || "http://localhost:5000"
 
 export function UserManagement() {
   const [users, setUsers] = useState<RegisteredUser[]>([])
@@ -31,23 +31,33 @@ export function UserManagement() {
   const [editingUser, setEditingUser] = useState<RegisteredUser | null>(null)
 
   useEffect(() => {
-    // Load registered users from localStorage
-    const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]")
-    setUsers(registeredUsers)
+    const fetchUsers = async () => {
+      const response = await fetch(`${baseUrl}/api/employee/employees`)
+      const data = await response.json()
+      console.log("Fetched users:", data)
+      setUsers(data)
+    }
+
+    fetchUsers()
   }, [])
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = selectedRole === "all" || user.role === selectedRole
     return matchesSearch && matchesRole
   })
 
   const handleDeleteUser = (userId: string) => {
-    const updatedUsers = users.filter((user) => user.id !== userId)
-    setUsers(updatedUsers)
-    localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers))
+    const deleteUser = async () => {
+      await fetch(`${baseUrl}/api/employee/${userId}`, {
+        method: "DELETE",
+      })
+      setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId))
+    }
+
+    deleteUser()
   }
 
   const handleEditUser = (user: RegisteredUser) => {
@@ -67,13 +77,19 @@ export function UserManagement() {
       position: formData.get("position") as string,
       phone: formData.get("phone") as string,
     }
-
+    // Update user in the backend
+    fetch(`${baseUrl}/api/employee/${editingUser.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatedUser),
+    })
     const updatedUsers = users.map((user) => (user.id === editingUser.id ? updatedUser : user))
 
     setUsers(updatedUsers)
-    localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers))
     setIsEditDialogOpen(false)
-    setEditingUser(null)
+
   }
 
   return (
@@ -119,7 +135,7 @@ export function UserManagement() {
                 <CardContent className="pt-4">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <h3 className="font-semibold">{user.name}</h3>
+                      <h3 className="font-semibold">{user.fullName}</h3>
                       <p className="text-sm text-muted-foreground">{user.position}</p>
                     </div>
                     <Badge variant={user.role === "admin" ? "default" : "secondary"}>
@@ -185,8 +201,8 @@ export function UserManagement() {
           {editingUser && (
             <form action={handleUpdateUser} className="space-y-4">
               <div>
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" name="name" defaultValue={editingUser.name} required />
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input id="fullName" name="fullName" defaultValue={editingUser.fullName} required />
               </div>
               <div>
                 <Label htmlFor="email">Email</Label>

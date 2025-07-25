@@ -66,9 +66,22 @@ export default function SignUpPage() {
 
     try {
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
+      const response = await fetch("http://localhost:5000/api/employee/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })  
+      if (!response.ok) {
+        throw new Error("Failed to create account")
+      }
+      setIsLoading(false)
+      setSuccess("Account created successfully! Redirecting to login...")
+      router.push("/login")
+      
       // Check if user already exists (mock check)
+      /*
       const existingUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]")
       const userExists = existingUsers.some((user: any) => user.email === formData.email)
 
@@ -104,6 +117,7 @@ export default function SignUpPage() {
       setTimeout(() => {
         router.push("/login")
       }, 2000)
+      */
     } catch (err) {
       setError("Registration failed. Please try again.")
     } finally {

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using EmployeeElevate.Models;
 using EmployeeElevate.Services.Interfaces;
+using EmployeeElevate.DTOs;
 
 namespace EmployeeElevate.Controllers
 {
@@ -30,11 +31,26 @@ namespace EmployeeElevate.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(string email, string password)
+        public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            var employee = await _employeeService.AuthenticateAsync(email, password);
-            if (employee == null) return Unauthorized("Invalid credentials.");
-            return Ok(employee);
+            var employee = await _employeeService.AuthenticateAsync(loginDto.Email, loginDto.Password);
+            if (employee == null) return Unauthorized(new { message = "Invalid credentials." });
+            
+            // Map to UserDto to exclude password
+            var userDto = new UserDto
+            {
+                Id = employee.Id,
+                FullName = employee.FullName,
+                Email = employee.Email,
+                Role = employee.Role,
+                Department = employee.Department,
+                Position = employee.Position,
+                Phone = employee.Phone,
+                JoinDate = employee.JoinDate,
+                Status = employee.Status
+            };
+            
+            return Ok(new { user = userDto, message = "Login successful" });
         }
     }
 }

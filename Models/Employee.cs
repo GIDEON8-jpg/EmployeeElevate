@@ -46,5 +46,11 @@ namespace EmployeeElevate.Models
         [MaxLength(20)]
         [Column("phone")]
         public string Phone { get; set; } = string.Empty;
+
+        [Column("join_date")]
+        public DateTime JoinDate { get; set; } = DateTime.Now;
+
+        [Column("status")]
+        public bool Status { get; set; } = true;
     }
 }

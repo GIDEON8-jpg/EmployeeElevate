@@ -55,7 +55,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 app.UseCors("AllowLocalhost3000");
-
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 // Swagger
 app.UseSwagger();
 app.UseSwaggerUI();

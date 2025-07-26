@@ -10,9 +10,18 @@ import { useAuth } from "@/hooks/use-auth"
 import { useEmployees } from "@/hooks/use-employees"
 import { useLeaveManagement } from "@/hooks/use-leave-management"
 import { useTaskManagement } from "@/hooks/use-task-management"
+import router from "next/router"
 
 export default function Dashboard() {
-  const { user, isAdmin } = useAuth()
+  const userData = typeof window !== 'undefined' && localStorage.getItem("user")
+    ? JSON.parse(localStorage.getItem("user") || "{}")
+    : null
+  const user = userData?.user // Extract the actual user object from the nested structure
+  
+  if (!user && typeof window !== 'undefined') {
+    router.push("/login")
+  }
+  const isAdmin = user?.role === "admin" || user?.role === "Admin"
   const { employees } = useEmployees()
   const { leaveApplications, getPendingLeaves, getApprovedLeaves } = useLeaveManagement()
   const { tasks, getTasksByAssignee, getTasksByStatus } = useTaskManagement()
@@ -24,7 +33,7 @@ export default function Dashboard() {
   const totalTasks = tasks.length
 
   // User-specific stats
-  const userTasks = user ? getTasksByAssignee(user.name) : []
+  const userTasks = user ? getTasksByAssignee(user.fullName) : []
   const userCompletedTasks = userTasks.filter((task) => task.status === "Completed").length
   const userPendingTasks = userTasks.filter(
     (task) => task.status === "In Progress" || task.status === "Not Started",
@@ -104,7 +113,7 @@ export default function Dashboard() {
         <div className="container mx-auto p-6">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">
-              Welcome back, {user?.name?.split(" ")[0] || "User"}! 👋
+              Welcome back, {user?.fullName?.split(" ")[0] || "User"}! 👋
             </h1>
             <p className="text-gray-600 mt-2">
               {isAdmin

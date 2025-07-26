@@ -14,27 +14,71 @@ import { Progress } from "@/components/ui/progress"
 import { CheckSquare, Clock, Plus, Search, Calendar, User, AlertTriangle, FileText, MessageSquare } from "lucide-react"
 import { ChatbotWidget } from "@/components/chatbot-widget"
 import { AuthGuard } from "@/components/auth-guard"
-import { useAuth } from "@/hooks/use-auth"
-import { useEmployees } from "@/hooks/use-employees"
-import { useTaskManagement, type Task } from "@/hooks/use-task-management"
 import { useToast } from "@/hooks/use-toast"
+import { getAuthHeaders } from "@/lib/auth-utils"
+
+// Backend Task interface matching C# model
+interface BackendTask {
+  id: number
+  title: string
+  description: string
+  status: "Not Started" | "In Progress" | "Review" | "Completed" | "On Hold"
+  priority: "Low" | "Medium" | "High" | "Critical"
+  dueDate: string
+  assignedDate: string
+  employeeId: number
+  // Add other properties from your C# model as needed
+}
+
+// Keep the existing Task interface for compatibility with admin features
+interface Task {
+  id: number
+  title: string
+  description: string
+  assignedTo: string
+  assignedBy: string
+  department: string
+  priority: "Low" | "Medium" | "High" | "Critical"
+  status: "Not Started" | "In Progress" | "Review" | "Completed" | "On Hold"
+  dueDate: string
+  estimatedHours: number
+  actualHours?: number
+  category: "Development" | "Marketing" | "HR" | "Finance" | "Operations" | "Sales" | "General"
+  tags: string[]
+  comments: Comment[]
+  completedDate?: string
+}
+
+interface Comment {
+  id: number
+  taskId: number
+  author: string
+  content: string
+  timestamp: string
+  type: "comment" | "status_change"
+}
+
+const base_url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
 
 const TasksPage = () => {
-  const { user, isAdmin } = useAuth()
-  const { employees } = useEmployees()
-  const {
-    tasks,
-    addTask,
-    updateTask,
-    deleteTask,
-    addComment,
-    getTaskStats,
-    getTasksByEmployee,
-    getOverdueTasks,
-    syncTasks,
-  } = useTaskManagement()
+  // Get user from localStorage (using the nested structure we discovered)
+  const userData = typeof window !== 'undefined' && localStorage.getItem("user")
+    ? JSON.parse(localStorage.getItem("user") || "{}")
+    : null
+  const user = userData?.user
+  const isAdmin = user?.role === "admin" || user?.role === "Admin"
+  
   const { toast } = useToast()
 
+  // State for backend tasks
+  const [backendTasks, setBackendTasks] = useState<BackendTask[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  // State for admin mock data (keep existing functionality)
+  const [adminTasks, setAdminTasks] = useState<Task[]>([])
+  
+  // UI state
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false)
@@ -44,37 +88,136 @@ const TasksPage = () => {
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [newComment, setNewComment] = useState("")
 
-  const taskStats = getTaskStats()
-  const myTasks = getTasksByEmployee(user?.name || "")
-  const overdueTasks = getOverdueTasks()
-
-  // Filter tasks based on user role and filters
-  const filteredTasks = (isAdmin ? tasks : myTasks).filter((task) => {
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || task.status === statusFilter
-    const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter
-    const matchesDepartment = departmentFilter === "all" || task.department === departmentFilter
-
-    return matchesSearch && matchesStatus && matchesPriority && matchesDepartment
-  })
-
-  // Add this useEffect to sync tasks when the component mounts
+  // Load tasks from backend
   useEffect(() => {
-    // Sync tasks when component mounts to ensure latest data
-    syncTasks()
-  }, [])
+    if (user?.id && !isAdmin) {
+      fetchUserTasks()
+    } else if (isAdmin) {
+      // For admin, keep existing mock data functionality
+      loadMockTasks()
+    }
+  }, [user?.id, isAdmin])
 
-  // Update the handleAddTask function to show better feedback
+  const fetchUserTasks = async () => {
+    if (!user?.id) return
+
+    try {
+      setLoading(true)
+      console.log('Fetching tasks for employee ID:', user.id)
+      
+      const response = await fetch(`${base_url}/task/employee/${user.id}`, {
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        const tasks = await response.json()
+        console.log('Tasks received from backend:', tasks)
+        setBackendTasks(tasks)
+        console.log('Setting backend tasks state:', tasks)
+        setError("")
+      } else {
+        console.error('Failed to fetch tasks:', response.status)
+        setError(`Failed to load tasks: ${response.status}`)
+        setBackendTasks([])
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error)
+      setError(`Error loading tasks: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      setBackendTasks([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadMockTasks = () => {
+    // Keep existing mock data for admin functionality
+    const mockTasks: Task[] = [
+      {
+        id: 1,
+        title: "Update Employee Portal Dashboard",
+        description: "Redesign and update the main dashboard interface with new metrics and improved user experience",
+        assignedTo: "Allen Njani",
+        assignedBy: "Leeroy Sibanda",
+        department: "Engineering",
+        priority: "High",
+        status: "In Progress",
+        dueDate: "2025-02-15",
+        estimatedHours: 40,
+        actualHours: 25,
+        category: "Development",
+        tags: ["frontend", "react", "dashboard"],
+        comments: [
+          {
+            id: 1,
+            taskId: 1,
+            author: "Allen Njani",
+            content: "Started working on the new dashboard layout. Making good progress.",
+            timestamp: "2025-01-22T10:30:00Z",
+            type: "comment"
+          }
+        ]
+      }
+      // Add more mock tasks as needed for admin
+    ]
+    setAdminTasks(mockTasks)
+    setLoading(false)
+  }
+
+  // Update task status (for backend tasks)
+  const handleBackendStatusUpdate = async (taskId: number, newStatus: BackendTask["status"]) => {
+    try {
+      const response = await fetch(`${base_url}/task/update/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: newStatus
+          // Add other required fields for TaskAssignmentDto
+        })
+      })
+
+      if (response.ok) {
+        // Update local state
+        setBackendTasks(prev => 
+          prev.map(task => 
+            task.id === taskId ? { ...task, status: newStatus } : task
+          )
+        )
+        
+        toast({
+          title: "🔄 Task Status Updated",
+          description: `Task status changed to ${newStatus}`,
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update task status",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Error updating task status:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update task status",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // For admin, keep existing mock functionality
   const handleAddTask = (formData: FormData) => {
+    if (!isAdmin) return // Only admin can add tasks in this UI
+    
     const assignedTo = formData.get("assignedTo") as string
     const taskData = {
+      id: Date.now(), // Simple ID generation for mock
       title: formData.get("title") as string,
       description: formData.get("description") as string,
       assignedTo,
-      assignedBy: user?.name || "Admin",
+      assignedBy: user?.fullName || "Admin",
       department: formData.get("department") as string,
       priority: formData.get("priority") as Task["priority"],
       status: "Not Started" as const,
@@ -85,9 +228,10 @@ const TasksPage = () => {
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean),
+      comments: []
     }
 
-    addTask(taskData)
+    setAdminTasks(prev => [...prev, taskData])
     setIsAddTaskOpen(false)
     toast({
       title: "✅ Task Successfully Assigned!",
@@ -95,39 +239,46 @@ const TasksPage = () => {
     })
   }
 
-  // Update the handleStatusUpdate function for better feedback
-  const handleStatusUpdate = (taskId: number, newStatus: Task["status"]) => {
-    const task = tasks.find((t) => t.id === taskId)
-    const updates: Partial<Task> = { status: newStatus }
-    if (newStatus === "Completed") {
-      updates.completedDate = new Date().toISOString().split("T")[0]
-    }
-
-    updateTask(taskId, updates)
-
-    // Add status change comment
-    addComment(taskId, {
-      taskId,
-      author: user?.name || "User",
-      content: `Status changed to ${newStatus}`,
-      type: "status_change",
-    })
+  // Admin task status update (for mock data)
+  const handleAdminStatusUpdate = (taskId: number, newStatus: Task["status"]) => {
+    const task = adminTasks.find((t) => t.id === taskId)
+    setAdminTasks(prev =>
+      prev.map(t =>
+        t.id === taskId
+          ? { 
+              ...t, 
+              status: newStatus,
+              completedDate: newStatus === "Completed" ? new Date().toISOString().split("T")[0] : t.completedDate
+            }
+          : t
+      )
+    )
 
     toast({
       title: "🔄 Task Status Updated",
-      description: `"${task?.title}" status changed to ${newStatus}. ${task?.assignedBy !== user?.name ? "Your manager will be notified." : "The assignee will see this update immediately."}`,
+      description: `"${task?.title}" status changed to ${newStatus}.`,
     })
   }
 
   const handleAddComment = (taskId: number) => {
     if (!newComment.trim()) return
 
-    addComment(taskId, {
+    const comment: Comment = {
+      id: Date.now(),
       taskId,
-      author: user?.name || "User",
+      author: user?.fullName || "User",
       content: newComment,
-      type: "comment",
-    })
+      timestamp: new Date().toISOString(),
+      type: "comment"
+    }
+
+    setAdminTasks(prev =>
+      prev.map(task =>
+        task.id === taskId
+          ? { ...task, comments: [...task.comments, comment] }
+          : task
+      )
+    )
 
     setNewComment("")
     toast({
@@ -135,6 +286,37 @@ const TasksPage = () => {
       description: "Your comment has been added to the task",
     })
   }
+
+  // Get the appropriate tasks based on user role
+  const currentTasks = isAdmin ? adminTasks : backendTasks
+  
+  // Filter tasks based on search and filters
+  const filteredTasks = currentTasks.filter((task) => {
+    const title = 'title' in task ? task.title : ''
+    const description = 'description' in task ? task.description : ''
+    const assignedTo = 'assignedTo' in task ? task.assignedTo : user?.fullName || ''
+    
+    const matchesSearch =
+      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignedTo.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === "all" || task.status === statusFilter
+    const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter
+    // For backend tasks, we don't have department info, so skip department filter for non-admin
+    const matchesDepartment = !isAdmin || departmentFilter === "all" || ('department' in task && task.department === departmentFilter)
+
+    return matchesSearch && matchesStatus && matchesPriority && matchesDepartment
+  })
+
+  // Calculate stats
+  const totalTasks = currentTasks.length
+  const inProgressTasks = currentTasks.filter(task => task.status === "In Progress").length
+  const completedTasks = currentTasks.filter(task => task.status === "Completed").length
+  const overdueTasks = currentTasks.filter(task => {
+    const dueDate = new Date(task.dueDate)
+    const today = new Date()
+    return dueDate < today && task.status !== "Completed"
+  }).length
 
   const getPriorityColor = (priority: Task["priority"]) => {
     switch (priority) {
@@ -204,7 +386,7 @@ const TasksPage = () => {
                 <CheckSquare className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{isAdmin ? taskStats.total : myTasks.length}</div>
+                <div className="text-2xl font-bold">{totalTasks}</div>
                 <p className="text-xs text-muted-foreground">{isAdmin ? "Organization-wide" : "Assigned to you"}</p>
               </CardContent>
             </Card>
@@ -215,9 +397,7 @@ const TasksPage = () => {
                 <Clock className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {isAdmin ? taskStats.inProgress : myTasks.filter((t) => t.status === "In Progress").length}
-                </div>
+                <div className="text-2xl font-bold">{inProgressTasks}</div>
                 <p className="text-xs text-muted-foreground">Active tasks</p>
               </CardContent>
             </Card>
@@ -228,9 +408,7 @@ const TasksPage = () => {
                 <CheckSquare className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {isAdmin ? taskStats.completed : myTasks.filter((t) => t.status === "Completed").length}
-                </div>
+                <div className="text-2xl font-bold">{completedTasks}</div>
                 <p className="text-xs text-muted-foreground">Finished tasks</p>
               </CardContent>
             </Card>
@@ -241,9 +419,7 @@ const TasksPage = () => {
                 <AlertTriangle className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {isAdmin ? overdueTasks.length : overdueTasks.filter((t) => t.assignedTo === user?.name).length}
-                </div>
+                <div className="text-2xl font-bold">{overdueTasks}</div>
                 <p className="text-xs text-muted-foreground">Past due date</p>
               </CardContent>
             </Card>
@@ -319,112 +495,143 @@ const TasksPage = () => {
 
               {/* Tasks List */}
               <div className="space-y-4">
-                {filteredTasks.map((task) => (
-                  <Card key={task.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-lg">{task.title}</h3>
-                            <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
-                            <Badge className={getStatusColor(task.status)}>{task.status}</Badge>
-                          </div>
-
-                          <p className="text-muted-foreground mb-3 line-clamp-2">{task.description}</p>
-
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm mb-4">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <span>
-                                Assigned to: <strong>{task.assignedTo}</strong>
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span>
-                                Due: <strong>{task.dueDate}</strong>
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span>
-                                Est: <strong>{task.estimatedHours}h</strong>
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <span>
-                                Category: <strong>{task.category}</strong>
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="mb-4">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm font-medium">Progress</span>
-                              <span className="text-sm text-muted-foreground">
-                                {getProgressPercentage(task.status)}%
-                              </span>
-                            </div>
-                            <Progress value={getProgressPercentage(task.status)} className="h-2" />
-                          </div>
-
-                          {task.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-4">
-                              {task.tags.map((tag, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedTask(task)
-                              setIsTaskDetailOpen(true)
-                            }}
-                          >
-                            <FileText className="mr-1 h-3 w-3" />
-                            View Details
-                          </Button>
-
-                          {(task.assignedTo === user?.name || isAdmin) && (
-                            <Select
-                              value={task.status}
-                              onValueChange={(value) => handleStatusUpdate(task.id, value as Task["status"])}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Not Started">Not Started</SelectItem>
-                                <SelectItem value="In Progress">In Progress</SelectItem>
-                                <SelectItem value="Review">Review</SelectItem>
-                                <SelectItem value="Completed">Completed</SelectItem>
-                                <SelectItem value="On Hold">On Hold</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-                      </div>
+                {loading && !isAdmin ? (
+                  <Card>
+                    <CardContent className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">Loading your tasks...</p>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
+                ) : error && !isAdmin ? (
+                  <Card>
+                    <CardContent className="text-center py-8">
+                      <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+                      <p className="text-red-600 mb-4">{error}</p>
+                      <Button onClick={fetchUserTasks}>Try Again</Button>
+                    </CardContent>
+                  </Card>
+                ) : filteredTasks.length === 0 ? (
+                  <Card>
+                    <CardContent className="text-center py-8">
+                      <CheckSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No tasks found matching your criteria.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  filteredTasks.map((task) => (
+                    <Card key={task.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="pt-6">
+                        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold text-lg">{task.title}</h3>
+                              <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
+                              <Badge className={getStatusColor(task.status)}>{task.status}</Badge>
+                            </div>
 
-              {filteredTasks.length === 0 && (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <CheckSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No tasks found matching your criteria.</p>
-                  </CardContent>
-                </Card>
-              )}
+                            <p className="text-muted-foreground mb-3 line-clamp-2">{task.description}</p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
+                              {isAdmin && 'assignedTo' in task && (
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <span>
+                                    Assigned to: <strong>{task.assignedTo}</strong>
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <span>
+                                  Due: <strong>{task.dueDate}</strong>
+                                </span>
+                              </div>
+                              {isAdmin && 'estimatedHours' in task && (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                  <span>
+                                    Est: <strong>{task.estimatedHours}h</strong>
+                                  </span>
+                                </div>
+                              )}
+                              {isAdmin && 'category' in task && (
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <span>
+                                    Category: <strong>{task.category}</strong>
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="mb-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium">Progress</span>
+                                <span className="text-sm text-muted-foreground">
+                                  {getProgressPercentage(task.status)}%
+                                </span>
+                              </div>
+                              <Progress value={getProgressPercentage(task.status)} className="h-2" />
+                            </div>
+
+                            {isAdmin && 'tags' in task && task.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mb-4">
+                                {task.tags.map((tag: string, index: number) => (
+                                  <Badge key={index} variant="outline" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col gap-2">
+                            {isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  if ('assignedTo' in task) {
+                                    setSelectedTask(task as Task)
+                                    setIsTaskDetailOpen(true)
+                                  }
+                                }}
+                              >
+                                <FileText className="mr-1 h-3 w-3" />
+                                View Details
+                              </Button>
+                            )}
+
+                            {((!isAdmin) || (isAdmin && 'assignedTo' in task && task.assignedTo === user?.fullName)) && (
+                              <Select
+                                value={task.status}
+                                onValueChange={(value) => {
+                                  if (isAdmin) {
+                                    handleAdminStatusUpdate(task.id, value as Task["status"])
+                                  } else {
+                                    handleBackendStatusUpdate(task.id, value as BackendTask["status"])
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Not Started">Not Started</SelectItem>
+                                  <SelectItem value="In Progress">In Progress</SelectItem>
+                                  <SelectItem value="Review">Review</SelectItem>
+                                  <SelectItem value="Completed">Completed</SelectItem>
+                                  <SelectItem value="On Hold">On Hold</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
             </TabsContent>
 
             {isAdmin && (
@@ -448,11 +655,10 @@ const TasksPage = () => {
                               <SelectValue placeholder="Select employee" />
                             </SelectTrigger>
                             <SelectContent>
-                              {employees.map((employee) => (
-                                <SelectItem key={employee.id} value={employee.name}>
-                                  {employee.name} - {employee.department}
-                                </SelectItem>
-                              ))}
+                              <SelectItem value="Allen Njani">Allen Njani - Engineering</SelectItem>
+                              <SelectItem value="Lucia Mukamba">Lucia Mukamba - Engineering</SelectItem>
+                              <SelectItem value="Leeroy Sibanda">Leeroy Sibanda - Marketing</SelectItem>
+                              <SelectItem value="Tadiwa Mundanga">Tadiwa Mundanga - Sales</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -545,39 +751,87 @@ const TasksPage = () => {
             )}
 
             <TabsContent value="analytics" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Tasks by Priority</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {Object.entries(taskStats.byPriority).map(([priority, count]) => (
-                        <div key={priority} className="flex justify-between items-center">
-                          <Badge className={getPriorityColor(priority as Task["priority"])}>{priority}</Badge>
-                          <span className="font-semibold">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+              {isAdmin ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Tasks by Priority</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {["Critical", "High", "Medium", "Low"].map((priority) => {
+                          const count = adminTasks.filter(task => task.priority === priority).length
+                          return (
+                            <div key={priority} className="flex justify-between items-center">
+                              <Badge className={getPriorityColor(priority as Task["priority"])}>{priority}</Badge>
+                              <span className="font-semibold">{count}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Tasks by Status</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {Object.entries(taskStats.byStatus).map(([status, count]) => (
-                        <div key={status} className="flex justify-between items-center">
-                          <Badge className={getStatusColor(status as Task["status"])}>{status}</Badge>
-                          <span className="font-semibold">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Tasks by Status</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {["Not Started", "In Progress", "Review", "Completed", "On Hold"].map((status) => {
+                          const count = adminTasks.filter(task => task.status === status).length
+                          return (
+                            <div key={status} className="flex justify-between items-center">
+                              <Badge className={getStatusColor(status as Task["status"])}>{status}</Badge>
+                              <span className="font-semibold">{count}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>My Tasks by Priority</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {["Critical", "High", "Medium", "Low"].map((priority) => {
+                          const count = backendTasks.filter(task => task.priority === priority).length
+                          return (
+                            <div key={priority} className="flex justify-between items-center">
+                              <Badge className={getPriorityColor(priority as BackendTask["priority"])}>{priority}</Badge>
+                              <span className="font-semibold">{count}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>My Tasks by Status</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {["Not Started", "In Progress", "Review", "Completed", "On Hold"].map((status) => {
+                          const count = backendTasks.filter(task => task.status === status).length
+                          return (
+                            <div key={status} className="flex justify-between items-center">
+                              <Badge className={getStatusColor(status as BackendTask["status"])}>{status}</Badge>
+                              <span className="font-semibold">{count}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 

@@ -28,7 +28,14 @@ export default function LeavesPage() {
   const [isApplyDialogOpen, setIsApplyDialogOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [selectedDepartment, setSelectedDepartment] = useState("all")
-  const { isAdmin, user } = useAuth()
+  
+  // Get user from localStorage with correct nested structure
+  const userData = typeof window !== 'undefined' && localStorage.getItem("user")
+    ? JSON.parse(localStorage.getItem("user") || "{}")
+    : null
+  const user = userData?.user
+  const isAdmin = user?.role === "admin" || user?.role === "Admin"
+  
   const { toast } = useToast()
   const { addLeaveApplication } = useLeaveManagement()
   const [departments, setDepartments] = useState<string[]>([])
@@ -79,20 +86,17 @@ export default function LeavesPage() {
 
   const handleApprove = async (id: number) => {
     try {
-      const response = await fetch(`/api/leaves/${id}/status`, {
+      // Your C# controller expects isApproved as a query parameter
+      const response = await fetch(`/api/leaves/${id}/status?isApproved=true`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          status: "Approved", 
-          approvedBy: user?.name,
-          approvedDate: new Date().toISOString().split("T")[0],
-          updatedAt: new Date().toISOString()
-        }),
       })
       
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Failed to approve leave:", errorText)
         throw new Error("Failed to approve leave")
       }
       
@@ -118,20 +122,17 @@ export default function LeavesPage() {
 
   const handleReject = async (id: number) => {
     try {
-      const response = await fetch(`/api/leaves/${id}/status`, {
+      // Your C# controller expects isApproved as a query parameter
+      const response = await fetch(`/api/leaves/${id}/status?isApproved=false`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          status: "Rejected", 
-          rejectedBy: user?.name,
-          rejectedDate: new Date().toISOString().split("T")[0],
-          updatedAt: new Date().toISOString()
-        }),
       })
       
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Failed to reject leave:", errorText)
         throw new Error("Failed to reject leave")
       }
       
@@ -161,20 +162,20 @@ export default function LeavesPage() {
     const endDate = new Date(formData.get("endDate") as string)
     const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
+    // Match the C# Leave model structure
     const newApplicationData = {
-      employeeName: user?.name || (formData.get("employeeName") as string),
-      department: user?.department || (formData.get("department") as string),
-      leaveType: formData.get("leaveType") as string,
-      startDate: formData.get("startDate") as string,
-      endDate: formData.get("endDate") as string,
-      daysRequested: days,
-      reason: formData.get("reason") as string,
-      status: "Pending" as const,
-      appliedDate: new Date().toISOString().split("T")[0],
-      // Add these fields to ensure proper timestamp handling
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      EmployeeId: user?.id || 0, // Use the actual employee ID from user object
+      StartDate: startDate.toISOString(), // Convert to ISO string for proper DateTime parsing
+      EndDate: endDate.toISOString(),     // Convert to ISO string for proper DateTime parsing
+      LeaveType: formData.get("leaveType") as string,
+      Reason: formData.get("reason") as string,
+      Status: "Pending",
+      // These might be additional fields your backend expects
+      DaysRequested: days,
+      AppliedDate: new Date().toISOString(),
     }
+
+    console.log("Sending leave application data:", newApplicationData)
 
     try {
       const response = await fetch("/api/leaves", {
@@ -186,7 +187,9 @@ export default function LeavesPage() {
       })
       
       if (!response.ok) {
-        throw new Error("Failed to submit leave application")
+        const errorText = await response.text()
+        console.error("Failed to submit leave:", errorText)
+        throw new Error(`Failed to submit leave application: ${response.status}`)
       }
       
       // Refresh the leave applications
@@ -202,6 +205,7 @@ export default function LeavesPage() {
         description: "Your leave application has been submitted and is visible to all team members for transparency.",
       })
     } catch (error) {
+      console.error("Error submitting leave:", error)
       toast({
         title: "Error",
         description: "Failed to submit leave application. Please try again.",
